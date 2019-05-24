@@ -4,8 +4,8 @@ import cv2
 import csv
 import numpy as np
 
-import rospy
-from std_msgs.msg import String
+#import rospy
+#from std_msgs.msg import String
 from time import time
 
 # NOTES
@@ -27,17 +27,19 @@ from time import time
 template = cv2.imread('template_mid.png', 0)
 w, h = template.shape[::-1]
 
-def publisher():
-	pub = rospy.Publisher('chatter', String)
-	rospy.init_node('food_detector', anonymous=True)
+# def publisher():
+# 	pub = rospy.Publisher('chatter', String)
+# 	rospy.init_node('food_detector', anonymous=True)
 
-	rate = rospy.Rate(20) #20hz
-	while not rospy.is_shutdown():
-		result = process_image('../food_images/vertical_skewer_lettuce/data_collection/pepper-angle-90-trial-3/color/image_3.png',
-			'../food_images/vertical_skewer_lettuce/data_collection/pepper-angle-0-trial-3/depth/image_3.png')
-		rospy.loginfo(result)
-		pub.publish(result)
-		rate.sleep()
+# 	rate = rospy.Rate(20) #20hz
+# 	while not rospy.is_shutdown():
+# 		result = process_image('../food_images/vertical_skewer_lettuce/data_collection/pepper-angle-90-trial-3/color/image_3.png',
+# 			'../food_images/vertical_skewer_lettuce/data_collection/pepper-angle-0-trial-3/depth/image_3.png')
+# 		rospy.loginfo(result)
+# 		pub.publish(result)
+# 		rate.sleep()
+
+
 
 
 def process_image(rgb_image, depth_image):
@@ -56,7 +58,13 @@ def process_image(rgb_image, depth_image):
 				img = cv2.imread(row[0], 0)
 				depth = cv2.imread(row[1], 0)
 
+				y = 200
+				x = 300
+
 				depth[...] = depth[...] * 500
+
+				img = img[y:y+280, x:x+250]
+				depth = depth[y:y+280, x:x+250]
 
 				img = cv2.convertScaleAbs(img, alpha=1.7, beta=-1.4)
 				# img = cv2.convertScaleAbs(img, alpha=2.7, beta=-1.0)
@@ -64,8 +72,8 @@ def process_image(rgb_image, depth_image):
 				blur = cv2.GaussianBlur(img, (7, 7), 0)
 				blur_edges = cv2.Canny(blur, 0, 140)
 
-				erosion_size = 4
-				erosion_type = cv2.MORPH_ELLIPSE	
+				erosion_size = 0
+				erosion_type = cv2.MORPH_RECT	
 				element = cv2.getStructuringElement(erosion_type, (2*erosion_size + 1, 2*erosion_size+1), (erosion_size, erosion_size))
 				depth = cv2.erode(depth, element)
 				# TEMPLATE MATCHING
@@ -74,41 +82,28 @@ def process_image(rgb_image, depth_image):
 				cv2.normalize(res, res, 0, 1, cv2.NORM_MINMAX, -1);
 
 				min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
+				top_left = max_loc
 				print max_val
+				print top_left
 				bottom_right = (max_loc[0] + w, max_loc[1] + h)
 
 				# END TEMPLATE MATCHING
-				# depth_cp = depth[max_loc[1]-12:int(max_loc[1]+(0.35*h)), max_loc[0]+15:max_loc[0]+78].copy()
-				# fork_crop = img[max_loc[1]:int(max_loc[1]+(0.35*h)), max_loc[0]+15:max_loc[0]+78].copy()
 
-				depth_cp = depth[max_loc[1]:int(max_loc[1]+(0.35*h)), max_loc[0]:max_loc[0]+w].copy()
-				# fork_crop = img[max_loc[1]:int(max_loc[1]+(0.35*h)), max_loc[0]:max_loc[0]+w].copy()
+				depth_cp = depth[top_left[1]:int(top_left[1]+(0.25*h)), top_left[0]+5:top_left[0]+65].copy() # crop to fork
 
 				# MAJORITY BLACK = ITEM SUCCESSFULLY ACQUIRED
 				# MAJORITY WHITE = ITEM ISN'T SUCCESSFUL
 
 				nonzero = cv2.countNonZero(depth_cp)
 				total = depth_cp.shape[0] * depth_cp.shape[1]
-				print total
 				zero = total - nonzero
 				ratio = zero * 100 / float(total)
 				error = 1
-
-
-				# print ratio
 
 				if ratio >= 50 - error:
 					csv_writer.writerow([row[2], "success\n"])
 				else:
 					csv_writer.writerow([row[2], "fail\n"])
 
-# cv2.imshow("Original", img)
-# cv2.imshow("blur_Canny", blur_edges)
-# cv2.imshow("depth", depth)
-# cv2.imshow("depth_fork", depth_cp)
-# cv2.imshow("img_fork", fork_crop)
-
-# cv2.waitKey(0)
-
 if __name__ == '__main__':
-	process_image('../food_images/vertical_skewer_lettuce/data_collection/pepper-angle-0-trial-3/depth/image_3.png', '../food_images/vertical_skewer_lettuce/data_collection/pepper-angle-0-trial-3/depth/image_3.png')
+	process_image('../../food_images/vertical_skewer_lettuce/data_collection/pepper-angle-0-trial-3/depth/image_3.png', '../../food_images/vertical_skewer_lettuce/data_collection/pepper-angle-0-trial-3/depth/image_3.png')
