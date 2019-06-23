@@ -8,10 +8,10 @@ def  nothing(x):
 	pass
  #not_skewered/sample_0000
  # skewered/sample_0008
-img = cv2.imread('food_collection_data/tilted_angled_isolated/data_collection/banana-angle-0-trial-0/color/image_3.png', 0)
+img = cv2.imread('food_collection_data/tilted_angled_lettuce/data_collection/broccoli-angle-90-trial-7/color/image_4.png', 0)
 template = cv2.imread('template_mid.png', 0)
 w, h = template.shape[::-1]
-depth = cv2.imread('food_collection_data/tilted_angled_isolated/data_collection/banana-angle-0-trial-0/depth/image_3.png', 0)
+depth = cv2.imread('food_collection_data/tilted_angled_lettuce/data_collection/broccoli-angle-90-trial-7/depth/image_4.png', 0)
 
 t = time()
 depth[...] = depth[...] * 500 #fastest method of product ~ 0.0007 seconds

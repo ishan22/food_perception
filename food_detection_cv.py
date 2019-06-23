@@ -71,11 +71,14 @@ def process_image(rgb_image, depth_image):
 
 				blur = cv2.GaussianBlur(img, (7, 7), 0)
 				blur_edges = cv2.Canny(blur, 0, 140)
+				# depth = cv2.GaussianBlur(depth, (7, 7), 0)
 
-				erosion_size = 0
-				erosion_type = cv2.MORPH_RECT	
+				erosion_size = 1
+				erosion_type = cv2.MORPH_CROSS	
 				element = cv2.getStructuringElement(erosion_type, (2*erosion_size + 1, 2*erosion_size+1), (erosion_size, erosion_size))
-				depth = cv2.erode(depth, element)
+				depth = cv2.dilate(depth, element)
+				
+				ret, depth = cv2.threshold(depth, 160, 255, cv2.THRESH_BINARY)
 				# TEMPLATE MATCHING
 
 				res = cv2.matchTemplate(blur_edges, template, cv2.TM_CCORR)
@@ -83,14 +86,12 @@ def process_image(rgb_image, depth_image):
 
 				min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
 				top_left = max_loc
-				print max_val
-				print top_left
 				bottom_right = (max_loc[0] + w, max_loc[1] + h)
 
 				# END TEMPLATE MATCHING
 
 				depth_cp = depth[top_left[1]:int(top_left[1]+(0.25*h)), top_left[0]+5:top_left[0]+65].copy() # crop to fork
-
+				depth_cp_2 = depth[top_left[1]:int(top_left[1]+(0.5*h)), top_left[0]+5:top_left[0]+65].copy()
 				# MAJORITY BLACK = ITEM SUCCESSFULLY ACQUIRED
 				# MAJORITY WHITE = ITEM ISN'T SUCCESSFUL
 
@@ -100,10 +101,33 @@ def process_image(rgb_image, depth_image):
 				ratio = zero * 100 / float(total)
 				error = 1
 
-				if ratio >= 50 - error:
+				nonzero2 = cv2.countNonZero(depth_cp_2)
+				total2 = depth_cp_2.shape[0] * depth_cp_2.shape[1]
+				zero2 = total2 - nonzero2
+				ratio2 = zero2 * 100 / float(total2)
+				error = 1
+
+				print ratio
+				print ratio2
+
+				if ratio >= 28:
 					csv_writer.writerow([row[2], "success\n"])
 				else:
-					csv_writer.writerow([row[2], "fail\n"])
+					# if ratio <= 15:
+					# 	csv_writer.writerow([row[2], "fail\n"])
+					# else:
+					if ratio2 >= 28:
+						csv_writer.writerow([row[2], "success\n"])
+					else:
+						csv_writer.writerow([row[2], "fail\n"])
+
+				# if ratio >= 50 - error:
+				# 	csv_writer.writerow([row[2], "success\n"])
+				# else:
+				# 	if ratio2 >= 50 - error:
+				# 		csv_writer.writerow([row[2], "success\n"])
+				# 	else:
+				# 		csv_writer.writerow([row[2], "fail\n"])
 
 if __name__ == '__main__':
 	process_image('../../food_images/vertical_skewer_lettuce/data_collection/pepper-angle-0-trial-3/depth/image_3.png', '../../food_images/vertical_skewer_lettuce/data_collection/pepper-angle-0-trial-3/depth/image_3.png')
